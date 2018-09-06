@@ -1,6 +1,7 @@
-=====
+
 Account Utils
-=====
+=============
+
 
 Accountutils is a simple django application to facilitate basic functionalities, like forgot password, change password, for api based projects.
 
