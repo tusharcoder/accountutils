@@ -13,5 +13,8 @@ urlpatterns = [
     url(r'^check/forgot_password_code/$', forgot_password_confirm, name='check_forgot_password_code'),
     url(r'^reset/password/$', reset_password, name='reset_password'),
     url(r'^change/password/$', change_password, name='change_password'),
-    # url(r'^login/$', login, name='login'),
+    #login user
+    url(r'^login/$', login, name='login'),
+    #register user
+    url(r'^register/$', registration_view, name='register_user'),
 ]

@@ -30,18 +30,21 @@ def send_mail(*args,**kwargs):
     """function to send the pdf attachment to the emails
         requires subject, body, html_body(optional), to_email
     """
-    from django.core.mail import EmailMultiAlternatives
-    to = kwargs.pop('to_email')
-    if not isinstance(to, list):
-        if isinstance(to, str):
-            to = [to,]
-    subject, from_email, to = kwargs.pop('subject'), DEFAULT_FROM_EMAIL, to
-    text_content = kwargs.pop('body')
-    if 'html_body' in kwargs:
-        html_content = kwargs.pop('html_body')
-    else:
-        html_content = None
-    msg = EmailMultiAlternatives(subject, text_content, from_email, to)
-    if html_content:
-        msg.attach_alternative(html_content, 'text/html')
-    msg.send()
+    try:
+        from django.core.mail import EmailMultiAlternatives
+        to = kwargs.pop('to_email')
+        if not isinstance(to, list):
+            if isinstance(to, str):
+                to = [to,]
+        subject, from_email, to = kwargs.pop('subject'), DEFAULT_FROM_EMAIL, to
+        text_content = kwargs.pop('body')
+        if 'html_body' in kwargs:
+            html_content = kwargs.pop('html_body')
+        else:
+            html_content = None
+        msg = EmailMultiAlternatives(subject, text_content, from_email, to)
+        if html_content:
+            msg.attach_alternative(html_content, 'text/html')
+        msg.send(fail_silently=True)
+    except:
+        pass

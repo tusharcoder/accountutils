@@ -1,5 +1,6 @@
 from django.contrib.auth import authenticate
 from django.contrib.auth.models import User
+from django.db import IntegrityError
 from rest_framework import status
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.authtoken.models import Token
@@ -9,6 +10,8 @@ from rest_framework.response import Response
 
 from .models import ForgotPasswordModel
 from .utils import validate, gen_hash, hexify, send_mail
+
+from .app_settings import SEND_REGISTRATION_MAILS
 
 
 # Create your views here.
@@ -25,7 +28,8 @@ def forgot_password_view(request):
         code = gen_hash()
         hex_code = hexify(code)
         ForgotPasswordModel.objects.create(code=hex_code, user=user)
-        send_mail(**{"body": "Reset password code is {}".format(code), "subject": "Forgot Password", "to_email":user.email})
+        send_mail(
+            **{"body": "Reset password code is {}".format(code), "subject": "Forgot Password", "to_email": user.email})
         return Response({'message': ['Reset code generated', ], 'code': code}, status=status.HTTP_201_CREATED)
     else:
         return Response({'error': ['{} method is not allowed'.format(request.method)]},
@@ -87,6 +91,10 @@ def change_password(request):
         if user.check_password(data.get("current_password")):
             user.set_password(data.get('new_password'))
             user.save(update_fields=('password',))
+        if SEND_REGISTRATION_MAILS:
+            send_mail(
+                **{"body": "Hi {}!Your password changes successfully".format(user.username), "subject": "Password Changed",
+                   "to_email": user.email})
         else:
             return Response({"errors": ['Current password is not correct']}, status=status.HTTP_401_UNAUTHORIZED)
         return Response({"message": "Password change successfully"}, status=status.HTTP_202_ACCEPTED)
@@ -98,14 +106,42 @@ def change_password(request):
 @api_view(['POST', ])
 def login(request):
     """function for login and return the token for the user"""
-    email = request.data.get('email')
+    username = request.data.get('username')
     password = request.data.get('password')
-    valid, errors = validate('email', 'password', **{"email": email, "password": password})
+    valid, errors = validate('username', 'password', **{"username": username, "password": password})
     if not valid:
         return Response({"errors": errors}, status=status.HTTP_400_BAD_REQUEST)
-    user = authenticate(**{'username': email, 'password': password})
+    user = authenticate(**{'username': username, 'password': password})
     if user:
         token, _ = Token.objects.get_or_create(user=user)
         return Response({"token": token.key}, status=status.HTTP_200_OK)
     else:
         return Response({"errors": ['Wrong Credentials']}, status=status.HTTP_401_UNAUTHORIZED)
+
+
+@api_view(['POST', ])
+def registration_view(request):
+    """view to implement the registration of thr user"""
+    data = request.data
+    valid, errors = validate('username', 'password', 'email', **data)
+    if not valid:
+        return Response({'error': errors}, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+    username = data.get('username')
+    password = data.get('password')
+    email = data.get('email')
+
+    if User.objects.filter(email=email).exists():
+        return Response({"error": "User already registered with email"}, status=status.HTTP_409_CONFLICT)
+    try:
+        User.objects.create_user(username, email, password)
+        if SEND_REGISTRATION_MAILS:
+            send_mail(
+                **{"body": "Hi {}! your registration is successful".format(username), "subject": "Registration Successful",
+                   "to_email": email})
+    except IntegrityError as e:
+        error_text = str(e)
+        error_field = error_text.split(".")[-1]
+        return Response({"error":["user is already registered with {}".format(error_field)]},status=status.HTTP_409_CONFLICT)
+    return Response({"message": [
+        'User registered successfully'
+    ]}, status=status.HTTP_201_CREATED)
