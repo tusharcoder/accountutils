@@ -15,13 +15,13 @@ os.chdir(os.path.normpath(os.path.join(os.path.abspath(__file__), os.pardir)))
 
 setup(
     name='django-accountutils',
-    version='0.3',
+    version='0.4',
     packages=find_packages(),
     include_package_data=True,
     license='BSD License',  # example license
     description='A django app for basic utilities - user registration, login, change password, reset password',
     long_description=README,
-    url='https://github.com/tusharcoder/accountutils, http://devtech.in',
+    url='https://github.com/tusharcoder/accountutils',
     author='Tushar Agarwal',
     author_email='tamyworld@gmail.com',
     classifiers=[
