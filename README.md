@@ -1,3 +1,7 @@
+INSTALLATION
+=====
+pip install django-accountutils
+
 Account Utils
 =====
 
