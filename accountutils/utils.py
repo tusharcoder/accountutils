@@ -48,3 +48,6 @@ def send_mail(*args,**kwargs):
         msg.send(fail_silently=True)
     except:
         pass
+
+def get_request_data(request):
+    return {key: request.data.get(key) for key in request.data.keys()}

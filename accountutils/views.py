@@ -9,7 +9,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from .models import ForgotPasswordModel
-from .utils import validate, gen_hash, hexify, send_mail
+from .utils import validate, gen_hash, hexify, send_mail, get_request_data
 
 from .app_settings import SEND_REGISTRATION_MAILS
 
@@ -18,8 +18,8 @@ from .app_settings import SEND_REGISTRATION_MAILS
 @api_view(['POST', ])
 def forgot_password_view(request):
     if request.method == "POST":
-        data = request.data
-        valid, errors = validate(*['username'], **request.data)
+        data = get_request_data(request)
+        valid, errors = validate(*['username'], **get_request_data(request))
         if not valid:
             return Response({"error": errors}, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
         username = data.get("username")
@@ -39,10 +39,10 @@ def forgot_password_view(request):
 @api_view(['POST', ])
 def forgot_password_confirm(request):
     if request.method == "POST":
-        valid, errors = validate(*['code'], **request.data)
+        valid, errors = validate(*['code'], **get_request_data(request))
         if not valid:
             return Response({"error": errors}, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
-        data = request.data
+        data = get_request_data(request)
         hex_code = hexify(data.get("code"))
         exists = ForgotPasswordModel.objects.filter(code=hex_code).exists()
         if exists:
@@ -58,10 +58,10 @@ def forgot_password_confirm(request):
 def reset_password(request):
     """view to reset the password"""
     if request.method == "POST":
-        valid, errors = validate(*['code', 'password'], **request.data)
+        valid, errors = validate(*['code', 'password'], **get_request_data(request))
         if not valid:
             return Response({"error": errors}, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
-        data = request.data
+        data = get_request_data(request)
         hex_code = hexify(data.get("code"))
         try:
             forgot_password_model = ForgotPasswordModel.objects.get(code=hex_code)
@@ -83,21 +83,21 @@ def reset_password(request):
 def change_password(request):
     """view to change password of the user"""
     if request.method == "POST":
-        valid, errors = validate(*['current_password', 'new_password'], **request.data)
+        valid, errors = validate(*['current_password', 'new_password'], **get_request_data(request))
         if not valid:
             return Response({"error": errors}, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
-        data = request.data
+        data = get_request_data(request)
         user = request.user
         if user.check_password(data.get("current_password")):
             user.set_password(data.get('new_password'))
             user.save(update_fields=('password',))
-        if SEND_REGISTRATION_MAILS:
-            send_mail(
-                **{"body": "Hi {}!Your password changes successfully".format(user.username), "subject": "Password Changed",
-                   "to_email": user.email})
+            if SEND_REGISTRATION_MAILS:
+                send_mail(
+                    **{"body": "Hi {}!Your password changes successfully".format(user.username), "subject": "Password Changed",
+                       "to_email": user.email})
+            return Response({"message": "Password change successfully"}, status=status.HTTP_202_ACCEPTED)
         else:
             return Response({"errors": ['Current password is not correct']}, status=status.HTTP_401_UNAUTHORIZED)
-        return Response({"message": "Password change successfully"}, status=status.HTTP_202_ACCEPTED)
     else:
         return Response({'error': ['{} method is not allowed'.format(request.method)]},
                         status=status.HTTP_405_METHOD_NOT_ALLOWED)
@@ -106,8 +106,8 @@ def change_password(request):
 @api_view(['POST', ])
 def login(request):
     """function for login and return the token for the user"""
-    username = request.data.get('username')
-    password = request.data.get('password')
+    username = get_request_data(request).get('username')
+    password = get_request_data(request).get('password')
     valid, errors = validate('username', 'password', **{"username": username, "password": password})
     if not valid:
         return Response({"errors": errors}, status=status.HTTP_400_BAD_REQUEST)
@@ -122,7 +122,7 @@ def login(request):
 @api_view(['POST', ])
 def registration_view(request):
     """view to implement the registration of thr user"""
-    data = request.data
+    data = get_request_data(request)
     valid, errors = validate('username', 'password', 'email', **data)
     if not valid:
         return Response({'error': errors}, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
