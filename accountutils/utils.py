@@ -6,7 +6,7 @@
 import hashlib
 from random import randint
 
-from django.conf.global_settings import DEFAULT_FROM_EMAIL
+from django.conf import settings
 
 
 def validate(*args, **kwargs):
@@ -36,7 +36,7 @@ def send_mail(*args,**kwargs):
         if not isinstance(to, list):
             if isinstance(to, str):
                 to = [to,]
-        subject, from_email, to = kwargs.pop('subject'), DEFAULT_FROM_EMAIL, to
+        subject, from_email, to = kwargs.pop('subject'), settings.DEFAULT_FROM_EMAIL, to
         text_content = kwargs.pop('body')
         if 'html_body' in kwargs:
             html_content = kwargs.pop('html_body')
